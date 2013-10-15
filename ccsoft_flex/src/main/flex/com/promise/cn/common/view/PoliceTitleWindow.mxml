@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<views:PBTitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" creationComplete="init()" close="closeWindow()" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" title="{titleStr}" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="300" height="210" xmlns:view="com.promise.cn.common.view.*" xmlns:views="com.promise.cn.views.*">
+	<fx:Declarations>
+	</fx:Declarations>
+	<fx:Metadata>
+		[Event(name="freshPolice",type ="com.promise.cn.framework.event.AppEvent")]
+	</fx:Metadata>
+	<fx:Script>
+		<![CDATA[
+			import com.promise.cn.common.vo.Dept;
+			import com.promise.cn.common.vo.Police;
+			import com.promise.cn.framework.event.AppEvent;
+			import com.promise.cn.framework.util.Global;
+			import com.promise.cn.framework.util.Icons;
+			import com.promise.cn.framework.util.PBConstant;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.remoting.mxml.RemoteObject;
+			import mx.validators.Validator;
+			[Bindable]
+			public var titleStr:String;
+			public var userType:Boolean = true;//默认是add,false 为修改
+			[Bindable]
+			public var police:Police;
+			private var policeService:RemoteObject;
+			[Bindable]
+			private var deptService:RemoteObject;
+			[Bindable]
+			private var ddlList:ArrayCollection;
+			
+			//初始化方法
+			public function init():void{
+				policeService = Global.getRemoteObject("policeService",policeServiceHandler);
+				deptService = Global.getRemoteObject("deptService",deptServiceHandle);
+				deptService.getDeptList();
+				if(null!=police){
+					policeName.text=police.name;
+					policeCode.text=police.code;
+					policePhone.text=police.phone;
+				}
+			}
+			
+			public function deptServiceHandle(event:ResultEvent):void{
+				ddlList = event.result as ArrayCollection;
+				if(null!=police){
+					ddl.selectedIndex = getDeptListIndex(police.code);
+				}else{
+					ddl.selectedIndex = 0;
+				}
+			}
+			
+			public function getDeptListIndex(code:String):int{
+				var index:int = 0;
+				for(var i:int;i<ddlList.length;i++){
+					var deptTemp:Dept = ddlList.getItemAt(i) as Dept;
+					if(deptTemp.code==code){
+						index = i;
+						break;
+					}
+				}
+				return index;
+			}
+			
+			public function policeServiceHandler(event:ResultEvent):void{
+				var regStr:String = event.result as String;
+				Alert.show("保存警察信息成功","系统提示");
+				dispatchEvent(new AppEvent(PBConstant.APP_POLICETITLEWINDOW,"success"));
+			}
+			
+			//保存按钮事件
+			protected function saveBtn_clickHandler(event:MouseEvent):void{
+				if(userType){
+					police = new Police();
+				}
+				police.name = policeName.text;
+				police.code = policeCode.text;
+				police.phone = policePhone.text;
+				police.dept = ddl.selectedItem as Dept;
+				if(userType){
+					policeService.savePolice(police);
+				}else{
+					policeService.editPolice(police);
+				}
+			}
+			
+			//重置按钮
+			public function resetBtn_clickHandler():void{
+				policeName.text = "";
+				policeCode.text = "";
+				policePhone.text = "";
+			}
+			
+			//关闭窗口事件
+			public function closeWindow(event:Event=null):void{
+				PopUpManager.removePopUp(this);
+			}
+			
+		]]>
+	</fx:Script>
+	<s:VGroup width="100%" height="100%" gap="5" verticalAlign="middle" horizontalAlign="center">
+		<s:HGroup>
+			<s:Label text="警察编号：" height="100%" verticalAlign="middle" />
+			<s:TextInput id="policeCode"  width="208" height="27" text=""/>
+		</s:HGroup>
+		<s:HGroup>
+			<s:Label text="警察名字：" height="100%" verticalAlign="middle" />
+			<s:TextInput id="policeName"  width="208" height="27" text=""/>
+		</s:HGroup>
+		<s:HGroup>
+			<s:Label text="警察电话：" height="100%" verticalAlign="middle" />
+			<s:TextInput id="policePhone"  width="208" height="27" text=""/>
+		</s:HGroup>
+		<s:HGroup verticalAlign="middle">
+			<s:Label text="警察部门：" height="100%" verticalAlign="middle" />
+			<s:DropDownList id="ddl" labelField="name" dataProvider="{ddlList}" width="208" />
+		</s:HGroup>
+		<s:HGroup>
+			<s:Button  id="saveBtn" label="保存" click="saveBtn_clickHandler(event)"/>
+			<s:Button  label="重置" click="resetBtn_clickHandler()"/>
+		</s:HGroup>
+	</s:VGroup>
+</views:PBTitleWindow>

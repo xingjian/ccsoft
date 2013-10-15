@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<views:PBTitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" creationComplete="init()" close="closeWindow()" 
+					 xmlns:s="library://ns.adobe.com/flex/spark" title="获取坐标" dropShadowVisible="false"
+					 xmlns:mx="library://ns.adobe.com/flex/mx" width="500" height="500" xmlns:view="com.promise.cn.common.view.*" xmlns:views="com.promise.cn.views.*">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Metadata>
+		[Event(name="getXY",type ="com.promise.cn.framework.event.AppEvent")]
+	</fx:Metadata>
+	<fx:Script>
+		<![CDATA[
+			import baidu.map.basetype.LngLat;
+			import baidu.map.basetype.Size;
+			import baidu.map.core.Map;
+			import baidu.map.event.MapEvent;
+			import baidu.map.layer.Layer;
+			import baidu.map.layer.RasterLayer;
+			import baidu.map.overlay.Marker;
+			
+			import com.promise.cn.framework.event.AppEvent;
+			
+			import mx.core.UIComponent;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.Image;
+			
+			public var map:Map;
+			public var xyValue:String="";
+			
+			//初始化
+			public function init():void{
+				map = new Map(new Size(this.width, this.height));		
+				map.centerAndZoom(new LngLat(104.682522, 31.468734), 12);
+				var layer:Layer = new RasterLayer("BaiduMap", map);			
+				map.addLayer(layer);	
+				var uc:UIComponent = new UIComponent();
+				uc.addChild(map);
+				mapCanvas.addChild(uc);
+			}
+			
+			protected function btn_clickHandler(event:MouseEvent):void{
+				map.addEventListener(MapEvent.CLICK,mapClickHandle);
+			}
+			
+			public function mapClickHandle(event:MapEvent):void{
+				map.removeEventListener(MapEvent.CLICK,mapClickHandle);
+				var marker:Marker = new Marker();
+				var lng:Number = Number(event.currentTarget.center.lng);
+				var lat:Number = Number(event.currentTarget.center.lat);
+				label.text = "坐标："+lng+"    "+lat;
+				xyValue = lng+","+lat;
+				marker.position = new LngLat(lng, lat);
+				var image:Image = new Image();
+				image.source = "com/promise/cn/images/mapPoint.png";
+				// 修改icon
+				var newicon:Sprite = new Sprite();
+				newicon.graphics.beginFill(0x0000ff, 1);
+				newicon.graphics.moveTo(0, 10);
+				newicon.graphics.lineTo(10, 0);
+				newicon.graphics.lineTo(20, 10);
+				newicon.graphics.lineTo(30, 0);
+				newicon.graphics.lineTo(40, 10);
+				newicon.graphics.lineTo(20, 30);
+				newicon.graphics.lineTo(0, 10);
+				marker.icon = newicon;
+				map.addOverlay(marker);
+			}
+			
+			public function closeWindow():void{
+				if(xyValue!=""){
+					var appEvent:AppEvent = new AppEvent("getXY",xyValue);
+					dispatchEvent(appEvent);
+				}
+				PopUpManager.removePopUp(this);
+			}
+			
+		]]>
+	</fx:Script>
+	<mx:Canvas id="mapCanvas" top="0" bottom="30" left="0" right="2">
+		
+	</mx:Canvas>
+	<s:Label top="5" left="5" id="label" color="#ff0000" />
+	<s:HGroup width="100%" horizontalAlign="center" height="30" bottom="0">
+		<s:Button label="标记" click="btn_clickHandler(event)" />
+		<s:Button label="关闭" click="closeWindow()" />
+	</s:HGroup>
+</views:PBTitleWindow>

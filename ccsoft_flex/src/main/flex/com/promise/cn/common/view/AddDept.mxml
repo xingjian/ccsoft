@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" creationComplete="init()"
+		 xmlns:s="library://ns.adobe.com/flex/spark" horizontalAlign="left" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="400" height="300">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.promise.cn.common.vo.Dept;
+			import com.promise.cn.framework.util.Global;
+			
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.remoting.mxml.RemoteObject;
+			
+			private var deptServiceAdd:RemoteObject;
+			
+			[Bindable]
+			public var parentDept:Dept;
+			
+			//初始化方法
+			public function init():void{
+				deptServiceAdd = Global.getRemoteObject("deptService",deptServiceAddHandle);
+			}
+			
+			//增加菜单处理
+			public function deptServiceAddHandle(event:ResultEvent):void{
+			
+			}
+			
+			//保存菜单
+			public function saveBtnClick(event:MouseEvent):void{
+				var deptTemp:Dept = new Dept();
+				deptTemp.name = deptNameTI.text;
+				deptTemp.code = deptCodeTI.text;
+				deptTemp.leaf = "1";
+				deptServiceAdd.saveDept(parentDept,deptTemp);
+			}
+			
+			//重置
+			public function restBtnClick(event:MouseEvent):void{
+				deptCodeTI.text = "";
+				deptNameTI.text = "";
+			}
+			
+		]]>
+	</fx:Script>
+	<s:Form width="100%" id="loginForm">
+		<s:FormItem label="上级部门:">
+			<s:TextInput id="parentName" editable="false" text="{parentDept.name}"/>
+		</s:FormItem>
+		<s:FormItem label="部门编码:">
+			<s:TextInput id="deptCodeTI" />
+		</s:FormItem>
+		<s:FormItem label="部门名称">
+			<s:TextInput id="deptNameTI" />
+		</s:FormItem>
+		<s:FormItem>
+			<s:HGroup width="100%">
+				<s:Button label="保存" click="saveBtnClick(event)" />
+				<s:Button label="重置" click="restBtnClick(event)" />
+			</s:HGroup>
+		</s:FormItem>
+	</s:Form>
+</s:VGroup>

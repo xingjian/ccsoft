@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" creationComplete="init()" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" xmlns:view="com.promise.cn.framework.view.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.promise.cn.common.vo.Dept;
+			import com.promise.cn.common.vo.Police;
+			import com.promise.cn.framework.event.AppEvent;
+			import com.promise.cn.framework.util.Global;
+			import com.promise.cn.framework.util.Icons;
+			import com.promise.cn.framework.util.PBConstant;
+			import com.promise.cn.framework.vo.QueryObject;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.remoting.mxml.RemoteObject;
+			
+			public var policeServiceQuery:RemoteObject;
+			public var policeServiceDelete:RemoteObject;
+			[Bindable]
+			private var deptList:ArrayCollection;
+			private var deptServiceList:RemoteObject;
+			[Bindable]
+			public var header:Array =  [{headerText:"警察编号",dataField:"code",width:'250'},
+										{headerText:"姓名",dataField:"name",width:'150'},
+										{headerText:"部门",dataField:"dept.name",width:'150'},
+										{headerText:"电话",dataField:"phone",width:'150'}];
+			
+			[Bindable]
+			private var linkButtons:Array = [{label:"查询",uri:"searchPolice",icon:Icons.searchIcon},
+				{label:"增加",uri:"addPolice",icon:Icons.addIcon},
+				{label:"修改",uri:"editPolice",icon:Icons.editIcon},
+				{label:"删除",uri:"removePolice",icon:Icons.removeIcon}];
+			
+			//初始化管理
+			private function init():void{
+				deptServiceList = Global.getRemoteObject("deptService",deptServiceListHandle);
+				deptServiceList.getDeptsTreeList();
+				policeServiceQuery = Global.getRemoteObject("policeService",policeServiceQueryHandle);
+				policeServiceDelete = Global.getRemoteObject("policeService",policeServiceDeleteHandle);
+				policeServiceQuery.getPolicePageSupport(null,1,20);
+					
+			}
+			
+			//获取菜单树成功
+			public function deptServiceListHandle(event:ResultEvent):void{
+				deptList = event.result as ArrayCollection;
+			}
+			
+			//用户删除
+			public function policeServiceDeleteHandle(event:ResultEvent):void{
+				refresh(null);
+				Alert.show("警察信息删除成功！","系统提示");
+			}
+			
+			//用户查询结果处理
+			public function policeServiceQueryHandle(event:ResultEvent):void{
+				pageGrid.setList(event);
+			}
+			
+			//刷新
+			public function refresh(event:AppEvent = null):void{
+				if(null==deptTree.selectedItem){
+					policeServiceQuery.getPolicePageSupport(null,pageGrid.pageNo,pageGrid.pageSize);
+				}else{
+					var dept:Dept = deptTree.selectedItem as Dept;
+					if(dept.id!="root"){
+						var list:ArrayCollection = new ArrayCollection();
+						var queryObject:QueryObject = new QueryObject();
+						queryObject.key = "dept.code";
+						queryObject.value = dept.code;
+						queryObject.queryType ="0";
+						queryObject.className="Police";
+						list.addItem(queryObject);
+						policeServiceQuery.getPolicePageSupport(list,pageGrid.pageNo,pageGrid.pageSize);
+					}else{
+						policeServiceQuery.getPolicePageSupport(null,pageGrid.pageNo,pageGrid.pageSize);
+					}
+				}
+			}
+			
+			//处理pbUserTW事件
+			public function policeTWEventHandle(event:AppEvent):void{
+				refresh(event);
+			}
+			
+			//linkBarClick事件
+			public function linkBarClick(event:AppEvent):void{
+				var uri:String = event.data.uri;
+				switch(uri){
+					case 'addPolice':
+						var policeTW:PoliceTitleWindow = new PoliceTitleWindow();
+						policeTW.titleStr = "增加警察信息";
+						policeTW.titleIcon = Icons.addIcon;
+						policeTW.addEventListener(PBConstant.APP_POLICETITLEWINDOW,policeTWEventHandle);
+						PopUpManager.addPopUp(policeTW,this,true);
+						Global.centerPopUpPos(policeTW);
+						break;
+					case 'removePolice':
+						removePolice();
+						break;
+					case 'editPolice':
+						if(pageGrid.selectedItem!=null){
+							var policeTW_Edit:PoliceTitleWindow = new PoliceTitleWindow();
+							policeTW_Edit.titleStr = "修改警察信息";
+							policeTW_Edit.titleIcon = Icons.editIcon;
+							policeTW_Edit.police = pageGrid.selectedItem as Police;
+							policeTW_Edit.userType = false;
+							policeTW_Edit.addEventListener(PBConstant.APP_POLICETITLEWINDOW,policeTWEventHandle);
+							PopUpManager.addPopUp(policeTW_Edit,this,true);
+							Global.centerPopUpPos(policeTW_Edit);
+						}else{
+							Alert.show("请选择警察记录！","系统提示");
+						}
+						break;
+				}
+			}
+			
+			public function removePolice():void{
+				if(null!=pageGrid.selectedItem){
+					Alert.show("确定要删除该警察信息吗？","系统提示",3,null,delHandler,null,Alert.NO);
+				}else{
+					Alert.show("请选择一条警察记录！","系统提示");
+				}
+			}
+			
+			public function delHandler(event:CloseEvent):void{
+				if(event.detail==Alert.YES){
+					var police:Police = pageGrid.selectedItem as Police;
+					policeServiceDelete.deletePolice(police.id);
+				}
+			}
+			
+			protected function deptTree_doubleClickHandler(event:MouseEvent):void
+			{
+				refresh(null);
+			}
+			
+		]]>
+	</fx:Script>
+	<view:CustomLinkBar id="linkBar" customLinkBarEvent="linkBarClick(event)" width="100%" buttons="{linkButtons}" />
+	<s:HGroup width="100%" height="100%">
+		<mx:Tree id="deptTree" width="25%" height="100%" dataProvider="{deptList}" labelField="name" doubleClickEnabled="true" doubleClick="deptTree_doubleClickHandler(event)" />
+		<view:PageGrid id="pageGrid" header="{header}" pageRefresh="refresh(event)" width="100%" height="100%"/>
+	</s:HGroup>
+	
+</s:VGroup>

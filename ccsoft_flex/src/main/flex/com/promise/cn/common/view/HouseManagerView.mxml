@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" creationComplete="init()"
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" xmlns:view="com.promise.cn.framework.view.*">
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import baidu.map.basetype.LngLat;
+			import baidu.map.basetype.Size;
+			import baidu.map.core.Map;
+			import baidu.map.layer.Layer;
+			import baidu.map.layer.RasterLayer;
+			import baidu.map.overlay.InfoWindow;
+			import baidu.map.overlay.Label;
+			import baidu.map.overlay.Marker;
+			
+			import com.promise.cn.common.vo.House;
+			import com.promise.cn.framework.event.AppEvent;
+			import com.promise.cn.framework.util.Global;
+			import com.promise.cn.framework.util.Icons;
+			import com.promise.cn.framework.util.PBConstant;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.core.UIComponent;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.remoting.mxml.RemoteObject;
+			
+			import spark.components.Image;
+			
+			private var houseService:RemoteObject;
+			private var houseTreeService:RemoteObject;
+			private var houseServiceDelete:RemoteObject;
+			public var map:Map;
+			public var  infowindow:InfoWindow;
+			public var houseArr:ArrayCollection = new ArrayCollection();
+			[Bindable]
+			public var header:Array =  [{headerText:"房屋编号",dataField:"code",width:'150'},
+				{headerText:"房屋名字",dataField:"name",width:'150'},
+				{headerText:"房主信息",dataField:"fzMessage",width:'150'},
+				{headerText:"房主电话",dataField:"fzphone",width:'150'},
+				{headerText:"租赁者信息",dataField:"zlzMessage",width:'150'},
+				{headerText:"租赁者电话",dataField:"zlzphone",width:'150'},
+				{headerText:"归属警察",dataField:"police.codeAndName",width:'150'},
+				{headerText:"地址",dataField:"address",width:'150'}
+			];
+			
+			[Bindable]
+			private var linkButtons:Array = [{label:"查询",uri:"searchhouse",icon:Icons.searchIcon},
+				{label:"增加",uri:"addHouse",icon:Icons.addIcon},
+				{label:"修改",uri:"editHouse",icon:Icons.editIcon},
+				{label:"删除",uri:"removeHouse",icon:Icons.removeIcon}];
+			
+			//初始化
+			public function init():void{
+				houseService = Global.getRemoteObject("houseService",houseServiceHandle);
+				houseTreeService = Global.getRemoteObject("houseService",houseTreeServiceHandle);
+				houseService.getHousePageSupport(null,1,50);
+				houseServiceDelete = Global.getRemoteObject("houseService",houseServiceDeleteHandle);
+			}
+			
+			public function houseTreeServiceHandle(event:ResultEvent):void{
+				houseArr = event.result as ArrayCollection;
+				var treeRoot:Object = {id:"root",nameAndCode:"房屋",children:event.result};
+				houseTree.dataProvider = treeRoot;
+				addBaiduLabels(houseArr);
+			}
+			
+			public function addBaiduLabels(ac:ArrayCollection = null):void{
+				if(null!=ac){
+					for each( var house:House in ac){
+						var label:Label = new Label(house.nameAndCode);
+						label.background.alpha = 0;
+						label.position = new LngLat(house.x, house.y);
+						label.contentStyle = new TextFormat("微软雅黑", 13, 0xff0000, true);
+						map.addOverlay(label);
+					}
+				}
+			}
+			
+			//用户删除
+			public function houseServiceDeleteHandle(event:ResultEvent):void{
+				refresh(null);
+				Alert.show("房屋信息删除成功！","系统提示");
+			}
+			
+			public function houseServiceHandle(event:ResultEvent):void{
+				pageGrid.setList(event);
+				map = new Map(new Size(mapHG.width, mapHG.height));		
+				map.centerAndZoom(new LngLat(104.682522, 31.468734), 12);
+				var layer:Layer = new RasterLayer("BaiduMap", map);			
+				map.addLayer(layer);	
+				var uc:UIComponent = new UIComponent();
+				uc.addChild(map);
+				mapHG.addElement(uc);
+				houseTreeService.getHouseList();
+			}
+			
+			public function refresh(event:Event = null):void{
+				houseService.getHousePageSupport(null,1,50);
+				houseTreeService.getHouseList();
+			}
+			
+			//linkBarClick事件
+			public function linkBarClick(event:AppEvent):void{
+				var uri:String = event.data.uri;
+				switch(uri){
+					case 'addHouse':
+						var houseTW:HouseTitleWindow = new HouseTitleWindow();
+						houseTW.titleStr = "增加房屋信息";
+						houseTW.titleIcon = Icons.addIcon;
+						houseTW.addEventListener(PBConstant.APP_HouseTITLEWINDOW,houseTWEventHandle);
+						PopUpManager.addPopUp(houseTW,this,true);
+						Global.centerPopUpPos(houseTW);
+						break;
+					case 'removeHouse':
+						removeHouse();
+						break;
+					case 'editHouse':
+						if(pageGrid.selectedItem!=null){
+							var houseTW_Edit:HouseTitleWindow = new HouseTitleWindow();
+							houseTW_Edit.titleStr = "修改房屋信息";
+							houseTW_Edit.titleIcon = Icons.editIcon;
+							houseTW_Edit.house = pageGrid.selectedItem as House;
+							houseTW_Edit.userType = false;
+							houseTW_Edit.addEventListener(PBConstant.APP_HouseTITLEWINDOW,houseTWEventHandle);
+							PopUpManager.addPopUp(houseTW_Edit,this,true);
+							Global.centerPopUpPos(houseTW_Edit);
+						}else{
+							Alert.show("请选择房屋记录！","系统提示");
+						}
+						break;
+				}
+			}
+			
+			public function removeHouse():void{
+				if(null!=pageGrid.selectedItem){
+					Alert.show("确定要删除该房屋信息吗？","系统提示",3,null,delHandler,null,Alert.NO);
+				}else{
+					Alert.show("请选择一条房屋记录！","系统提示");
+				}
+			}
+			
+			public function delHandler(event:CloseEvent):void{
+				if(event.detail==Alert.YES){
+					var house:House = pageGrid.selectedItem as House;
+					houseServiceDelete.deleteHouse(house.id);
+				}
+			}
+			
+			
+			//处理pbUserTW事件
+			public function houseTWEventHandle(event:AppEvent):void{
+				refresh(event);
+			}
+			
+			public function tabChange():void{
+			
+			}
+			
+			public function houseTree_doubleClickHandler(event:Event = null):void{
+				if(null!=houseTree.selectedItem){
+					var id:String = houseTree.selectedItem.id as String;
+					if(id!="root"){
+						var houseTemp:House = houseTree.selectedItem as House;
+						var s:String="";
+						s+="房屋编号："+houseTemp.code+"\r\r";
+						s+="房屋名称："+houseTemp.name+"\r\r";
+						s+="房主信息："+houseTemp.fzMessage+"\r\r";
+						s+="房主电话："+houseTemp.fzphone+"\r\r";
+						s+="归属警察："+houseTemp.police.codeAndName+"\r\r";
+						s+="\r";
+						infowindow= new InfoWindow(s, new TextFormat("宋体", 13, 0x0099FF), "房屋信息", new TextFormat("宋体", 14, 0x00000, true));
+						map.zoom = 17;
+						map.panTo(new LngLat(houseTemp.x, houseTemp.y));
+						map.openInfoWindow(infowindow,map.lnglatToPixel(new LngLat(houseTemp.x, houseTemp.y)));
+					}
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	<mx:TabNavigator id="tab" width="100%" height="100%" creationPolicy="all" change="tabChange()">
+		<s:NavigatorContent label="树形展示" id="treeNC" width="100%" height="100%">
+			<s:HGroup width="100%" height="100%" top="-10">
+				<s:Group width="20%" height="100%">
+					<mx:Tree labelField="nameAndCode" id="houseTree" width="100%" height="100%"  doubleClickEnabled="true" doubleClick="houseTree_doubleClickHandler(event)">
+						
+					</mx:Tree>
+				</s:Group>
+				<s:HGroup id="mapHG" width="80%" height="100%">
+				</s:HGroup>
+			</s:HGroup>
+		</s:NavigatorContent>
+		<s:NavigatorContent label="列表展示" id="listNC">
+			<s:VGroup width="100%" height="100%">
+				<view:CustomLinkBar id="linkBar" customLinkBarEvent="linkBarClick(event)" width="100%" buttons="{linkButtons}" />
+				<view:PageGrid id="pageGrid" header="{header}" pageRefresh="refresh(event)" width="100%" height="100%"/>
+			</s:VGroup>
+		</s:NavigatorContent>
+	</mx:TabNavigator>
+</s:Group>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+					  xmlns:s="library://ns.adobe.com/flex/spark" creationComplete="init()" 
+					  xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" xmlns:view="com.promise.cn.framework.view.*" xmlns:view1="com.promise.cn.common.view.*">
+	<fx:Metadata>
+		[Event(name="navigationListChange", type="com.promise.cn.framework.event.AppEvent")]
+	</fx:Metadata>
+	<fx:Declarations>
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.promise.cn.common.vo.PBUser;
+			import com.promise.cn.framework.event.AppEvent;
+			import com.promise.cn.framework.util.Global;
+			import com.promise.cn.framework.util.PBConstant;
+			
+			import mx.controls.Alert;
+			import mx.core.IVisualElement;
+			
+			//初始化方法
+			private function init():void{
+				AppEvent.addListener(PBConstant.APP_LOGINSUCCESS,loginSuccessHandler);
+			}
+			
+			//登录成功
+			private function loginSuccessHandler(event:AppEvent):void{
+				var navigationView:NavigationView = new NavigationView();
+				navigationView.addEventListener(PBConstant.APP_NAVIGATION_LISTCHANGE,tileClick);
+				this.addElement(navigationView);
+			}
+			
+			//更换右边面板
+			private function tileClick(event:AppEvent):void{
+				this.dispatchEvent(new AppEvent(PBConstant.APP_NAVIGATION_LISTCHANGE,event.data.toString()));
+			}
+			
+		]]>
+	</fx:Script>
+</s:Group>
