@@ -43,6 +43,7 @@ public class House {
 	private String zlzphone;
 	private double x;
 	private double y;
+	private int active;
 	
 	@Id
 	@GeneratedValue(generator = "system-uuid")
@@ -163,6 +164,12 @@ public class House {
 	}
 	public void setZlzphone(String zlzphone) {
 		this.zlzphone = zlzphone;
+	}
+	public int getActive() {
+		return active;
+	}
+	public void setActive(int active) {
+		this.active = active;
 	}
 	
 }

@@ -20,4 +20,6 @@ public interface HouseService {
 	public List<House> getHouseList();
 	public String deleteHouse(String id);
 	public PageSupport getHousePageSupport(List valueObject,int pageNo,int pageSize);
+	public House getHouseByID(String id);
+	public String setActive(String code);
 }

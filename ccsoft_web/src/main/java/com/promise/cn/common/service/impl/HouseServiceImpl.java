@@ -48,6 +48,8 @@ public class HouseServiceImpl implements HouseService {
 		return "success";
 	}
 
+	
+	
 	@Override
 	@RemotingInclude
 	public String editHouse(House house) {
@@ -82,6 +84,22 @@ public class HouseServiceImpl implements HouseService {
 			return queryManager.find(sql, pageNo, pageSize);
 	}
 
+	@Override
+	@RemotingInclude
+	public String setActive(String code){
+		String retStr = "success";
+		String hql = "from House t where t.fzphone='"+code+"' or t.zlzphone='"+code+"'";
+		List<House> list = queryManager.find(hql);
+		if(null!=list){
+			for(int i=0;i<list.size();i++){
+				House house = list.get(i);
+				house.setActive(1);
+				editHouse(house);
+			}
+		}
+		return retStr;
+	}
+	
 	public void setPersistenceManager(PersistenceManager persistenceManager) {
 		this.persistenceManager = persistenceManager;
 	}
@@ -93,6 +111,15 @@ public class HouseServiceImpl implements HouseService {
 	public void setJdbcPersistenceManager(
 			JdbcPersistenceManager jdbcPersistenceManager) {
 		this.jdbcPersistenceManager = jdbcPersistenceManager;
+	}
+
+
+
+	@RemotingInclude
+	@Override
+	public House getHouseByID(String id) {
+		House house = (House) queryManager.get(House.class, id);
+		return house;
 	}
 
 	
